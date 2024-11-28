@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.MenuItem
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Column
@@ -17,8 +16,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.ui.Modifier
 import com.wsafight.test.ui.theme.Theme
+import com.wsafight.test.utils.ActivityCollector
+import com.wsafight.test.utils.BaseActivity
 
-class SecondActivity : ComponentActivity() {
+class SecondActivity : BaseActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,6 +53,13 @@ class SecondActivity : ComponentActivity() {
                             }
                         ) {
                             Text("返回")
+                        }
+                        Button(
+                            onClick = {
+                                ActivityCollector.finishAll();
+                            }
+                        ) {
+                            Text("关闭")
                         }
                     }
                 }
