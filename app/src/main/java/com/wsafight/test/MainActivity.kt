@@ -1,6 +1,7 @@
 package com.wsafight.test
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -8,10 +9,13 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.BitmapFactory
+import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.ContactsContract
+import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.setContent
@@ -36,10 +40,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
+import androidx.core.content.FileProvider
+import com.wsafight.test.constants.CameraTestProviderAuthority
 import com.wsafight.test.constants.SecondPage
 import com.wsafight.test.ui.theme.Theme
 import com.wsafight.test.utils.BaseActivity
+import com.wsafight.test.utils.ImgHelper
 import com.wsafight.test.utils.PermissionHelper
+import java.io.File
 
 
 /**
@@ -108,6 +116,8 @@ class MainActivity : BaseActivity() {
         this.unRegisterTimeChangeReceiver();
     }
 
+    private val gotoSecondRequestCode = 1
+
     /**
      * 去次要页面
      *
@@ -118,7 +128,7 @@ class MainActivity : BaseActivity() {
         //加入数据
         intent.putExtra("extra_data", "123");
         // 开启里
-        startActivityForResult(intent, 1)
+        startActivityForResult(intent, gotoSecondRequestCode)
     }
 
     private fun gotoSecondPage () {
@@ -132,13 +142,35 @@ class MainActivity : BaseActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         when (requestCode) {
-            1 -> if (resultCode == RESULT_OK) {
+            gotoSecondRequestCode -> if (resultCode == RESULT_OK) {
                 val returnedData = data?.getStringExtra("data_return")
                 Toast.makeText(this, "123123", Toast.LENGTH_SHORT).show()
                 Log.d("FirstActivity", "returned data is $returnedData")
             }
+            takePhotoRequestCode -> if (resultCode == Activity.RESULT_OK) {
+                // 将拍摄的照片显示出来
+                val bitmap = BitmapFactory.decodeStream(contentResolver.
+                openInputStream(imageUri))
+                // 调用照相机程序去拍照有可能会在一些手机上发生照片旋转的情况。这是因为
+                // 这些手机认为打开摄像头进行拍摄时手机就应该是横屏的，因此回到竖屏的情况下就会发生90度的旋转。
+                // 为此，这里我们又加上了判断图片方向的代码
+                val fixedBitmap =  ImgHelper.rotateIfRequired(outputImage.path, bitmap)
+                // TODO 将修正后的 bitMap 放入控件中
+            }
+            openAlbumRequestCode -> if (resultCode == Activity.RESULT_OK && data != null) {
+                data.data?.let { uri ->
+                    // 将选择的图片显示
+                    val bitmap = contentResolver
+                        .openFileDescriptor(uri, "r")?.use {
+                            BitmapFactory.decodeFileDescriptor(it.fileDescriptor)
+                        }
+                    // TODO 将修正后的 bitMap 放入控件中
+                }
+            }
         }
     }
+
+
 
     /**
      * 需要在 AndroidManifest 中注册并授权，注册后，安卓系统方便告知应用需要的权限
@@ -345,6 +377,93 @@ class MainActivity : BaseActivity() {
         // 取消通知
         // manager.cancel(1)
     }
+
+    private val takePhotoRequestCode = 2
+
+
+
+    // 晚点初始化，可以用 ::imageUri.isInitialized 来判断
+    lateinit var imageUri: Uri
+    lateinit var outputImage: File
+
+    /**
+     * 多媒体拍照
+     */
+    fun startPhotograph () {
+        // 因为从Android 6.0系统开始，读写SD卡
+        // 被列为了危险权限，如果将图片存放在SD卡的任何其他目录，都要进行运行时权限处理才行，
+        // 使用应用关联目录则可以跳过这一步。默认保存在 /sdcard/Android/data/<package name>/cache
+        outputImage = File(externalCacheDir, "xxx.jpg")
+        if (outputImage.exists()) {
+            outputImage.delete()
+        }
+
+
+        outputImage.createNewFile()
+
+        // 从Android 7.0系统开始，直接使用本地真实路径的Uri被认为是不安全的，会抛出一个FileUriExposedException异常
+        imageUri =
+            FileProvider.getUriForFile(this, CameraTestProviderAuthority, outputImage)
+
+        // 启动相机程序
+        val intent = Intent("android.media.action.IMAGE_CAPTURE")
+        intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri)
+        startActivityForResult(intent, takePhotoRequestCode)
+    }
+
+    private val openAlbumRequestCode = 3
+
+    /**
+     * 打开相册
+     */
+    fun openAlbum () {
+        // 打开文件选择器
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
+        intent.addCategory(Intent.CATEGORY_OPENABLE)
+        // 指定只显示图片
+        intent.type = "image/*"
+        startActivityForResult(intent, openAlbumRequestCode)
+    }
+
+
+    val mediaPlayer = MediaPlayer()
+
+    /**
+     * 播放音频
+     */
+    fun prepareMedia () {
+        // 读取 src main 下面的额 assets 文件夹
+        val assetManager = assets
+        // 获取 mp3 句柄
+        val fd = assetManager.openFd("mp3.mp3")
+        // 设置资源
+        mediaPlayer.setDataSource(fd.fileDescriptor, fd.startOffset, fd.length)
+        mediaPlayer.prepare()
+        // 其他操作
+        mediaPlayer.start()
+        mediaPlayer.stop()
+        // 释放资源
+        mediaPlayer.release();
+    }
+
+    fun prepareVideo () {
+        // 视频无法放入 assets 中，在 res raw 里面。注：视频不可用
+        val uri = Uri.parse("android.resource://$packageName/${R.raw.video}")
+        // 类似与 dom 设置 attr
+        // videoView.setVideoURI(uri)
+        // 开始播放
+        // videoView.start()
+        // pause 暂停
+        // resume 从头开始
+        // seekTo 指定位置播放
+        // isPlaying 是否正在播放
+        // getDuration 获取播放时长
+        // suspend 释放资源
+    }
+
+
+
+
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
