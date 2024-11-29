@@ -18,6 +18,7 @@ import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import com.wsafight.test.MainActivity
 import com.wsafight.test.constants.SecondPage
+import com.wsafight.test.utils.simpleStartService
 import kotlin.concurrent.thread
 
 class VLocationService : Service() {
@@ -115,10 +116,10 @@ class VLocationService : Service() {
 
     companion object {
         fun startVLocationService (context: Activity,longitude: Double, latitude: Double ) {
-            val intent = Intent(context, VLocationService::class.java)
-            intent.putExtra("longitude", longitude)
-            intent.putExtra("latitude", latitude)
-            context.startService(intent)
+            simpleStartService<VLocationService>(context) {
+                putExtra("longitude", longitude)
+                putExtra("latitude", latitude)
+            }
         }
 
     }

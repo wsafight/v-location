@@ -14,6 +14,9 @@ inline fun <reified T> simpleStartActivity(context: Context, block: Intent.() ->
     context.startActivity(intent)
 }
 
+
+
+
 class TestReified {
     fun source(context: Context) {
         val intent = Intent(context, SecondActivity::class.java)
