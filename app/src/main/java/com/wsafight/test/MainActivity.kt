@@ -6,15 +6,18 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.ServiceConnection
 import android.graphics.BitmapFactory
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.provider.ContactsContract
@@ -46,13 +49,27 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.FileProvider
 import com.wsafight.test.constants.CameraTestProviderAuthority
 import com.wsafight.test.constants.SecondPage
+import com.wsafight.test.services.MyService
 import com.wsafight.test.ui.theme.Theme
 import com.wsafight.test.utils.BaseActivity
+import com.wsafight.test.utils.HttpCallbackListener
+import com.wsafight.test.utils.HttpUtil
 import com.wsafight.test.utils.ImgHelper
 import com.wsafight.test.utils.PermissionHelper
+import com.wsafight.test.utils.simpleStartActivity
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONArray
+import java.io.BufferedReader
 import java.io.File
+import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
 import kotlin.concurrent.thread
 
+/**
+ * 安卓 4 大组件全部都需要在 AndroidManifest.xml 配置中声明才可以使用
+ */
 
 /**
  * 安卓 4 大组件 Activity
@@ -84,8 +101,6 @@ class MainActivity : BaseActivity() {
         override fun onReceive(context: Context, intent: Intent) {
             Toast.makeText(context, "Time has changed", Toast.LENGTH_SHORT).show()
         }
-
-
     }
 
     /**
@@ -165,6 +180,7 @@ class MainActivity : BaseActivity() {
                 data.data?.let { uri ->
                     // 将选择的图片显示
                     val bitmap = contentResolver
+                        // use 无需回收，完成后自动会调用回收方法
                         .openFileDescriptor(uri, "r")?.use {
                             BitmapFactory.decodeFileDescriptor(it.fileDescriptor)
                         }
@@ -476,10 +492,18 @@ class MainActivity : BaseActivity() {
             // 报错
             // btnView.text = "123";
         }
+
+        runOnUiThread {
+            // ok
+            // btnView.text = "123";
+        }
     }
 
     val updateBtnText = 1
 
+    /**
+     * 原理如下所示，开启一个消息队列
+     */
     val handler = object : Handler(Looper.getMainLooper()) {
         override fun handleMessage(msg: Message) {
             // 在这里可以进行UI操作
@@ -502,8 +526,109 @@ class MainActivity : BaseActivity() {
             handler.sendMessage(msg)
         }
 
-        // 可以使用 AsyncTask，不过已经废弃了。
+        // 可以使用 Android AsyncTask，不过已经标志废弃了。
     }
+
+    /**
+     * 安卓 4 大组件 Service
+     *
+     * 需要在 AndroidManifest.xml 添加如下代码
+     *      <service
+     *         android:name=".services.MyService"
+     *         android:enabled="true"
+     *         android:exported="true" />
+     *
+     *  添加 binder 是为了 service 和 activity 能够通信
+     *  activity 可以随时调用 downloadBinder 中的任何公开方法
+     */
+    lateinit var downloadBinder: MyService.DownloadBinder
+
+    private val connection = object : ServiceConnection {
+        // 在 Activity 与 Service 成功绑定的时候调用
+        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+            downloadBinder = service as MyService.DownloadBinder
+            downloadBinder.startDownload()
+            downloadBinder.getProgress()
+        }
+        // 在Service的创建进程崩溃或者被杀掉的时候才会调
+        override fun onServiceDisconnected(name: ComponentName) {
+        }
+    }
+
+
+    fun startMyService () {
+        val intent = Intent(this, MyService::class.java)
+        bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        startService(intent)
+    }
+
+    fun stopMyService () {
+        // 解绑Service
+        unbindService(connection)
+        val intent = Intent(this, MyService::class.java)
+        stopService(intent);
+    }
+
+    /**
+     * 开启网络请求，需要添加
+     * <uses-permission android:name="android.permission.INTERNET" />
+     */
+    fun requestUrl () {
+        HttpUtil.sendHttpRequest("https://www.baidu.com",
+            // 生成个对象继承 HttpCallbackListener
+            object: HttpCallbackListener {
+            override fun onFinish(response: String) {
+                runOnUiThread {
+                    // btnView.text = response.toString()
+                }
+            }
+            override fun onError(e: Exception) {
+                e.printStackTrace()
+            }
+
+        })
+    }
+
+    private fun requestUrlByOkHttp () {
+        thread {
+            try {
+                val client = OkHttpClient()
+                val request = Request.Builder()
+                    .url("https://www.baidu.com")
+                    .build()
+                val response = client.newCall(request).execute()
+                val responseData = response.body?.string()
+                if (responseData != null) {
+                    runOnUiThread{
+                        // btnView.text = response.toString()
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    /**
+     * 解析 json 没办法像 JavaScript 一样写，使用 GSON 吧
+     */
+    private fun parseJSONWithJSONObject(jsonData: String) {
+        try {
+            val jsonArray = JSONArray(jsonData)
+            for (i in 0 until jsonArray.length()) {
+                val jsonObject = jsonArray.getJSONObject(i)
+                val id = jsonObject.getString("id")
+                val name = jsonObject.getString("name")
+                val version = jsonObject.getString("version")
+                Log.d("MainActivity", "id is $id")
+                Log.d("MainActivity", "name is $name")
+                Log.d("MainActivity", "version is $version")
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
 
 
     @OptIn(ExperimentalMaterial3Api::class)
