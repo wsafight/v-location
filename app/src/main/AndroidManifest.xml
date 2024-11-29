@@ -5,9 +5,8 @@
     <uses-feature
         android:name="android.hardware.telephony"
         android:required="true" />
-    <!--  读取通信录的权限   -->
     <uses-permission android:name="android.permission.CALL_PHONE" />
-    <!-- 打电话的权限   -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <application
         android:allowBackup="true"

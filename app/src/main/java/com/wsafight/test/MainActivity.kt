@@ -1,11 +1,15 @@
 package com.wsafight.test
 
 import android.annotation.SuppressLint
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.ContactsContract
 import android.util.Log
@@ -31,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationCompat
 import com.wsafight.test.constants.SecondPage
 import com.wsafight.test.ui.theme.Theme
 import com.wsafight.test.utils.BaseActivity
@@ -67,6 +72,8 @@ class MainActivity : BaseActivity() {
         override fun onReceive(context: Context, intent: Intent) {
             Toast.makeText(context, "Time has changed", Toast.LENGTH_SHORT).show()
         }
+
+
     }
 
     /**
@@ -99,49 +106,6 @@ class MainActivity : BaseActivity() {
     override fun onDestroy() {
         super.onDestroy()
         this.unRegisterTimeChangeReceiver();
-    }
-
-
-    @OptIn(ExperimentalMaterial3Api::class)
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        //  在应用中全屏显示内容
-        enableEdgeToEdge();
-
-        // 生命周期是一个管理工具，不要把太多逻辑写入，分散到不同的方法中去
-        this.registerTimeChangeReceiver()
-
-        // 设置内容
-        setContent {
-            Theme {
-                Scaffold(
-                    topBar = {
-                        TopAppBar(
-                            title = {
-                                Text("虚拟地址工具")
-                            }
-                        )
-                    },
-                    modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Column(
-                        modifier = Modifier
-                            .padding(innerPadding),
-                    ) {
-
-                        MainContent(
-                            gotoSecond= {
-
-//                                gotoSecondPage()
-                                requestPermissionThenReadContacts()
-                            },
-                            finish = {
-                                finish()
-                            }
-                        )
-                    }
-                }
-            }
-        }
     }
 
     /**
@@ -207,7 +171,7 @@ class MainActivity : BaseActivity() {
         PermissionHelper.requestPermissionThenAction(this, android.Manifest.permission.CALL_PHONE,
             phonePermissionRequestCode
         )  {
-           this.tel()
+            this.tel()
         }
     }
 
@@ -223,11 +187,11 @@ class MainActivity : BaseActivity() {
                 PermissionHelper.onRequestPermissionsResult(
                     grantResults, {
                         // 拒绝后弹出弹窗
-                    Toast.makeText(this, "You denied the permission",
-                        Toast.LENGTH_SHORT).show()
-                }) {
+                        Toast.makeText(this, "You denied the permission",
+                            Toast.LENGTH_SHORT).show()
+                    }) {
                     // 同意了直接拨打电话
-                   this.tel()
+                    this.tel()
                 }
             }
             contactPermissionRequestCode -> {
@@ -292,17 +256,17 @@ class MainActivity : BaseActivity() {
              * also- 当你想使用apply但不想阴影时使用它this
              */
             ?.apply {
-            while (moveToNext()) {
-                // 获取联系人姓名
-                val displayName = getString(getColumnIndex(
-                    ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME))
-                // 获取联系人手机号
-                val number = getString(getColumnIndex(
-                    ContactsContract.CommonDataKinds.Phone.NUMBER))
-                constants.add("$displayName\n$number")
+                while (moveToNext()) {
+                    // 获取联系人姓名
+                    val displayName = getString(getColumnIndex(
+                        ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME))
+                    // 获取联系人手机号
+                    val number = getString(getColumnIndex(
+                        ContactsContract.CommonDataKinds.Phone.NUMBER))
+                    constants.add("$displayName\n$number")
+                }
+                close()
             }
-            close()
-        }
 
         Log.d("MainActivity::readContacts", constants.toString())
 
@@ -324,6 +288,110 @@ class MainActivity : BaseActivity() {
             this.readContacts()
         }
     }
+
+    /**
+     * 安卓通知渠道（可以订阅具体的通知类型）
+     * 每一个应用程序都可以自由地创建当前应用拥有哪些通知渠道，但是这些通知渠道的控制权是掌握在用户手上的。
+     * 安卓系统 13 以上需要添加权限申请
+     * <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+     */
+    private fun sendSystemNotice () {
+        // 通过字符串确定使用哪一个系统服务
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as
+                NotificationManager
+
+        //  createNotificationChannel()方法都是 Android 8.0 系统中新增的API，
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            /**
+             * 渠道id、渠道名称重要等级
+             * 通知的重要等级从高到低主要有 IMPORTANCE_HIGH、IMPORTANCE_DEFAULT、 IMPORTANCE_LOW、IMPORTANCE_MIN
+             * 开发者只能在创建通知渠道的时候为它指定初始的重要等级，如果用户不认可这个重要等级的话，可以随时进行修改
+             * 开发者对此无权再进行调整和变更，因为通知渠道一旦创建就不能再通过代码修改了
+             */
+            val channel = NotificationChannel("normal", "Normal",NotificationManager.
+            IMPORTANCE_DEFAULT)
+            manager.createNotificationChannel(channel)
+        }
+
+        // 跳转进入当前 Activity
+        val intent = Intent(this, MainActivity::class.java)
+
+        // 添加一个延迟执行的 intent(意图),
+        val pi = PendingIntent.getActivity(
+            this,
+            0,
+            // 意图
+            intent,
+            //  标记位, FLAG_IMMUTABLE 表示将约束外部应用消费 PendingIntent 修改其中的 Intent
+            // 其他的自行查阅文档
+            PendingIntent.FLAG_IMMUTABLE)
+
+        val notification = NotificationCompat.Builder(this, "normal")
+            // setContentTitle 方法用于指定通知的标题内容,下拉系统状态栏就可以看到这部分内容
+            .setContentTitle("This is content title")
+            // setContentText 指定通知的正文内容
+            .setContentText("This is content text")
+            // setSmallIcon 方法设置小图标
+            .setSmallIcon(R.drawable.ic_launcher_background)
+            //
+            .setContentIntent(pi)
+            // 点击后会自动取消
+            .setAutoCancel(true)
+            // setLargeIcon 方法设置大图标
+            //.setLargeIcon(R.drawable)
+            .build()
+        // 发送通知，保证每一个 id 不相同的,如果需要调用 取消则需要传入对应的 id
+        manager.notify(1, notification)
+        // 取消通知
+        // manager.cancel(1)
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        //  在应用中全屏显示内容
+        enableEdgeToEdge();
+
+        // 生命周期是一个管理工具，不要把太多逻辑写入，分散到不同的方法中去
+        this.registerTimeChangeReceiver()
+
+        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+
+        // 设置内容
+        setContent {
+            Theme {
+                Scaffold(
+                    topBar = {
+                        TopAppBar(
+                            title = {
+                                Text("虚拟地址工具")
+                            }
+                        )
+                    },
+                    modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    Column(
+                        modifier = Modifier
+                            .padding(innerPadding),
+                    ) {
+
+                        MainContent(
+                            gotoSecond= {
+
+//                                gotoSecondPage()
+//                                requestPermissionThenReadContacts()
+                                sendSystemNotice()
+                            },
+                            finish = {
+                                finish()
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+
 
 }
 
