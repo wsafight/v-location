@@ -1,4 +1,4 @@
-package com.wsafight.test.utils
+package com.wsafight.test.storage
 
 import android.app.Activity
 import android.content.Context
@@ -9,7 +9,6 @@ import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 
 /**
- * 安卓存储的辅助累，还有 sqlite 等
  */
 object FileHelper {
 

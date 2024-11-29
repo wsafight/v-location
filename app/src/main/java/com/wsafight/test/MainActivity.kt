@@ -14,6 +14,9 @@ import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.Message
 import android.provider.ContactsContract
 import android.provider.MediaStore
 import android.util.Log
@@ -48,6 +51,7 @@ import com.wsafight.test.utils.BaseActivity
 import com.wsafight.test.utils.ImgHelper
 import com.wsafight.test.utils.PermissionHelper
 import java.io.File
+import kotlin.concurrent.thread
 
 
 /**
@@ -462,7 +466,44 @@ class MainActivity : BaseActivity() {
     }
 
 
+    /**
+     * 和许多其他的GUI库一样，Android的 UI 也是线程不安全的。也就是说，如果想要更新应用程序
+     * 里的UI元素，必须在主线程中进行，否则就会出现异常。这点和 浏览器 是一致的，没啥可说的
+     */
+    fun changeBtnNameErr () {
+        // 语法糖，开启一个线程
+        thread {
+            // 报错
+            // btnView.text = "123";
+        }
+    }
 
+    val updateBtnText = 1
+
+    val handler = object : Handler(Looper.getMainLooper()) {
+        override fun handleMessage(msg: Message) {
+            // 在这里可以进行UI操作
+            when (msg.what) {
+                updateBtnText -> {
+                    //  textView.text = "Nice to meet you"
+                }
+            }
+        }
+    }
+
+    fun changeBtnName () {
+        // 语法糖，开启一个线程
+        thread {
+            val msg = Message()
+            msg.what = updateBtnText;
+            /**
+             * 消息队列发消息
+             */
+            handler.sendMessage(msg)
+        }
+
+        // 可以使用 AsyncTask，不过已经废弃了。
+    }
 
 
     @OptIn(ExperimentalMaterial3Api::class)
