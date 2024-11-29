@@ -45,6 +45,8 @@ class TestProvider: ContentProvider() {
      * by lazy 代码块是 Kotlin 提供的一种懒加载技术，代码块中的代码一开始并不会执行
      * 只有当 uriMatcher 变量首次被调用的时候才会执行
      * 会将代码块中最后一行代码的返回值赋给 uriMatcher
+     *
+     * 类似原理可以参考 utils 中 later
      */
     private val uriMatcher by lazy {
         val matcher = UriMatcher(UriMatcher.NO_MATCH)
