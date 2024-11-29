@@ -11,6 +11,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.ServiceConnection
+import android.content.SharedPreferences
 import android.graphics.BitmapFactory
 import android.media.MediaPlayer
 import android.net.Uri
@@ -50,26 +51,25 @@ import androidx.core.content.FileProvider
 import com.wsafight.test.constants.CameraTestProviderAuthority
 import com.wsafight.test.constants.SecondPage
 import com.wsafight.test.services.MyService
+import com.wsafight.test.services.VLocationService
 import com.wsafight.test.ui.theme.Theme
 import com.wsafight.test.utils.BaseActivity
 import com.wsafight.test.utils.HttpCallbackListener
 import com.wsafight.test.utils.HttpUtil
 import com.wsafight.test.utils.ImgHelper
 import com.wsafight.test.utils.PermissionHelper
-import com.wsafight.test.utils.simpleStartActivity
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
-import java.io.BufferedReader
 import java.io.File
-import java.io.InputStreamReader
-import java.net.HttpURLConnection
-import java.net.URL
 import kotlin.concurrent.thread
 
 /**
  * 安卓 4 大组件全部都需要在 AndroidManifest.xml 配置中声明才可以使用
  */
+
+
+
 
 /**
  * 安卓 4 大组件 Activity
@@ -77,6 +77,8 @@ import kotlin.concurrent.thread
  * Android 应用中每一个 Activity 都必须要在 AndroidManifest.xml 配置文件中声明，否则系统将不识别也不执行该Activity
  */
 class MainActivity : BaseActivity() {
+
+
 
     /**
      * 安卓 4 大组件 Broadcast Receiver
@@ -630,6 +632,20 @@ class MainActivity : BaseActivity() {
     }
 
 
+    private fun startChangeAddressService(longitude: Double?, latitude: Double?) {
+        if (longitude == null) {
+            Toast.makeText(this, "经度输入有误", Toast.LENGTH_SHORT).show()
+            return;
+        }
+        if (latitude == null) {
+            Toast.makeText(this, "纬度输入有误", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        VLocationService.startVLocationService(this, longitude, latitude);
+
+
+    }
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -637,10 +653,11 @@ class MainActivity : BaseActivity() {
         //  在应用中全屏显示内容
         enableEdgeToEdge();
 
+
+
         // 生命周期是一个管理工具，不要把太多逻辑写入，分散到不同的方法中去
         this.registerTimeChangeReceiver()
 
-        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
         // 设置内容
         setContent {
@@ -660,11 +677,10 @@ class MainActivity : BaseActivity() {
                     ) {
 
                         MainContent(
-                            gotoSecond= {
-
-//                                gotoSecondPage()
-//                                requestPermissionThenReadContacts()
-                                sendSystemNotice()
+                            gotoSecond= { longitude, latitude ->
+                                run {
+                                    startChangeAddressService(longitude, latitude)
+                                }
                             },
                             finish = {
                                 finish()
@@ -681,17 +697,18 @@ class MainActivity : BaseActivity() {
 }
 
 
+
 /**
  * 没啥好说的，基本上和前端 DOM 树差距不大。不需要用 xml 写了
  */
 @Composable
-fun MainContent(gotoSecond: () -> Unit, finish: () -> Unit) {
+fun MainContent( gotoSecond: (longitude: Double?, latitude: Double?) -> Unit, finish: () -> Unit) {
 
-    var xVal by rememberSaveable { mutableStateOf("") }
-    var yVal by rememberSaveable { mutableStateOf("") }
+    var longitude by rememberSaveable { mutableStateOf("") }
+    var latitude by rememberSaveable { mutableStateOf("") }
 
-    TextField(value = xVal, onValChange = { xVal = it }, label = "经度")
-    TextField(value = yVal, onValChange = { yVal = it }, label = "纬度")
+    TextField(value = longitude, onValChange = { longitude = it }, label = "经度")
+    TextField(value = latitude, onValChange = { latitude = it }, label = "纬度")
 
     Log.i("22", "2423")
 
@@ -699,7 +716,7 @@ fun MainContent(gotoSecond: () -> Unit, finish: () -> Unit) {
         Button(
             onClick = {
                 Log.v("2313", "1231")
-                gotoSecond()
+                gotoSecond(longitude.toDoubleOrNull(),  latitude.toDoubleOrNull())
             }
         ) {
             Text("开始设置")

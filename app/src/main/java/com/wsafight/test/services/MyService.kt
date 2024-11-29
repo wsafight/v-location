@@ -91,6 +91,11 @@ class MyService : Service() {
             // 我们可以通过不断 pull 来确认当前 Service 是否执行了然后在外部关闭
             // 有需要可以直接在内部开启一个线程来处理，完毕后直接关闭即可
             // 也可以使用 intentService,不过不推荐使用
+
+
+
+
+
             stopSelf()
         }
         return super.onStartCommand(intent, flags, startId)
