@@ -2,6 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="true" />
+    <!--  读取通信录的权限   -->
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <!-- 打电话的权限   -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -18,7 +25,7 @@
             android:theme="@style/Theme.Test" >
             <intent-filter>
                 <!-- 当前的动作  -->
-                <action android:name="com.example.activitytest.ACTION_START" />
+                <action android:name="com.page.secondActivity.ACTION_START" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -33,6 +40,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <provider
+            android:name=".provider.TestProvider"
+            android:authorities="com.wsafight.test.provider"
+            android:enabled="true"
+            android:exported="true">
+        </provider>
     </application>
 
 </manifest>
