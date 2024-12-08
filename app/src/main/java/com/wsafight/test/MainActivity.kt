@@ -48,6 +48,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
 import androidx.core.content.FileProvider
+import com.wsafight.test.base.MyApplication
 import com.wsafight.test.constants.CameraTestProviderAuthority
 import com.wsafight.test.constants.SecondPage
 import com.wsafight.test.services.MyService
@@ -656,7 +657,7 @@ class MainActivity : BaseActivity() {
 
 
         // 生命周期是一个管理工具，不要把太多逻辑写入，分散到不同的方法中去
-        this.registerTimeChangeReceiver()
+        // this.registerTimeChangeReceiver()
 
 
         // 设置内容
@@ -716,6 +717,7 @@ fun MainContent( gotoSecond: (longitude: Double?, latitude: Double?) -> Unit, fi
         Button(
             onClick = {
                 Log.v("2313", "1231")
+//                "开始设置".showToast()
                 gotoSecond(longitude.toDoubleOrNull(),  latitude.toDoubleOrNull())
             }
         ) {
@@ -733,6 +735,14 @@ fun MainContent( gotoSecond: (longitude: Double?, latitude: Double?) -> Unit, fi
     }
 }
 
+
+fun String.showToast(duration: Int = Toast.LENGTH_SHORT) {
+    Toast.makeText(MyApplication.context, this, duration).show()
+}
+fun Int.showToast(duration: Int = Toast.LENGTH_SHORT) {
+    Toast.makeText(MyApplication.context, this, duration).show()
+}
+
 @Composable
 fun TextField(value: String, onValChange: (String) -> Unit, label: String = "地址") {
     OutlinedTextField(
@@ -743,8 +753,8 @@ fun TextField(value: String, onValChange: (String) -> Unit, label: String = "地
 }
 
 /**
- * 类似 JavaScript 在原型链上进行修改，不建议使用
- * 在上面可以直接调用 "".testCancelText() 获取取消设置
+ * 类似 JavaScript 在原型链上进行修改，反正个人不建议使用
+ * 在上面可以直接调用 "".testCancelText() 获取取消设置文本
  */
 fun String.testCancelText (): String {
     return "取消设置"

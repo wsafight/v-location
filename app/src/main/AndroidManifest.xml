@@ -18,6 +18,7 @@
         tools:ignore="MockLocation,ProtectedPermissions" />
 
     <application
+        android:name=".base.MyApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"

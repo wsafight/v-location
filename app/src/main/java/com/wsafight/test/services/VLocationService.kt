@@ -10,14 +10,9 @@ import android.content.Context
 import android.content.Intent
 import android.location.Location
 import android.location.LocationManager
-import android.os.Build
 import android.os.IBinder
 import android.os.SystemClock
 import android.util.Log
-import android.widget.Toast
-import androidx.core.app.NotificationCompat
-import com.wsafight.test.MainActivity
-import com.wsafight.test.constants.SecondPage
 import com.wsafight.test.utils.simpleStartService
 import kotlin.concurrent.thread
 
@@ -100,6 +95,7 @@ class VLocationService : Service() {
 
             locationManager.setTestProviderLocation(providerStr, mockLocation)
         } catch (e: java.lang.Exception) {
+            Log.d("eeeeeeeee", e.message.toString())
             // 防止用户在软件运行过程中关闭模拟位置或选择其他应用
             stopMockLocation()
             throw e
